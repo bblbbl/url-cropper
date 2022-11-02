@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package rpc;
+
+option go_package = "bblbbl/cropper";
+
+service UrlCropper {
+  rpc CropUrl (CropRequest) returns (CroppedUrl) {}
+}
+
+message CropRequest {
+  string url = 1;
+}
+
+message CroppedUrl {
+  string url = 1;
+}
