@@ -18,7 +18,7 @@ func NewCropperServer() *CropperServer {
 	}
 }
 
-func (s *CropperServer) CropUrl(ctx context.Context, rq *cropper.CropRequest) (*cropper.CroppedUrl, error) {
+func (s *CropperServer) CropUrl(_ context.Context, rq *cropper.CropRequest) (*cropper.CroppedUrl, error) {
 	url := rq.GetUrl()
 
 	result := &cropper.CroppedUrl{Url: s.urlService.CropUrl(url)}

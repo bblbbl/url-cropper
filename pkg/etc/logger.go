@@ -3,8 +3,6 @@ package etc
 import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"log"
-	"path/filepath"
 )
 
 var (
@@ -13,16 +11,11 @@ var (
 )
 
 func InitLogger() {
-	logsDir, err := filepath.Abs("../../logs")
-	if err != nil {
-		log.Fatalf("failed to get work directory: %e", err)
-	}
-
 	zapCnf := zap.Config{
 		Level:            zap.NewAtomicLevel(),
 		Encoding:         "json",
-		OutputPaths:      []string{"stdout", logsDir},
-		ErrorOutputPaths: []string{"stdout", logsDir},
+		OutputPaths:      []string{"stdout"},
+		ErrorOutputPaths: []string{"stdout"},
 		EncoderConfig: zapcore.EncoderConfig{
 			MessageKey:  "message",
 			LevelKey:    "level",

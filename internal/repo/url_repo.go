@@ -59,7 +59,7 @@ func (r *MysqlUrlRepo) GetByFull(url string) *Url {
 func (r *MysqlUrlRepo) GetByShort(url string) *Url {
 	var u Url
 	err := r.conn.
-		QueryRow("SELECT long FROM urls WHERE short = ?", url).
+		QueryRow("SELECT `long` FROM urls WHERE `short` = ?", url).
 		Scan(&u.long)
 
 	if err != nil {

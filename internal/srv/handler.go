@@ -2,6 +2,7 @@ package srv
 
 import (
 	"github.com/gin-gonic/gin"
+	"net/http"
 	"urls/internal/repo"
 	"urls/internal/service"
 )
@@ -22,15 +23,15 @@ type urlRequest struct {
 
 func (uh UrlHandler) Crop(ctx *gin.Context) {
 	var request urlRequest
-	err := ctx.ShouldBind(&request)
+	err := ctx.ShouldBindJSON(&request)
 	if err != nil || request.Url == "" {
-		ctx.JSON(422, gin.H{
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{
 			"message": "url is required filed",
 		})
 		return
 	}
 
-	ctx.JSON(200, gin.H{
+	ctx.JSON(http.StatusOK, gin.H{
 		"url": uh.urlService.CropUrl(request.Url),
 	})
 }
@@ -39,16 +40,16 @@ func (uh UrlHandler) Redirect(ctx *gin.Context) {
 	var request urlRequest
 	err := ctx.ShouldBindUri(&request)
 	if err != nil {
-		ctx.JSON(422, gin.H{
+		ctx.JSON(http.StatusUnprocessableEntity, gin.H{
 			"message": "hash param is required",
 		})
 	}
 
 	url, err := uh.urlService.GetLongUrl(request.Url)
 	if err != nil {
-		ctx.Status(404)
+		ctx.Status(http.StatusNotFound)
 		return
 	}
 
-	ctx.Redirect(302, url)
+	ctx.Redirect(http.StatusFound, url)
 }
