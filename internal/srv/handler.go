@@ -16,18 +16,35 @@ func NewUrlHandler() UrlHandler {
 	}
 }
 
+type urlRequest struct {
+	Url string `form:"url" json:"url" uri:"hash" binding:"required"`
+}
+
 func (uh UrlHandler) Crop(ctx *gin.Context) {
-	url := ctx.PostForm("url")
+	var request urlRequest
+	err := ctx.ShouldBind(&request)
+	if err != nil || request.Url == "" {
+		ctx.JSON(422, gin.H{
+			"message": "url is required filed",
+		})
+		return
+	}
 
 	ctx.JSON(200, gin.H{
-		"url": uh.urlService.CropUrl(url),
+		"url": uh.urlService.CropUrl(request.Url),
 	})
 }
 
 func (uh UrlHandler) Redirect(ctx *gin.Context) {
-	hash := ctx.Param("hash")
+	var request urlRequest
+	err := ctx.ShouldBindUri(&request)
+	if err != nil {
+		ctx.JSON(422, gin.H{
+			"message": "hash param is required",
+		})
+	}
 
-	url, err := uh.urlService.GetLongUrl(hash)
+	url, err := uh.urlService.GetLongUrl(request.Url)
 	if err != nil {
 		ctx.Status(404)
 		return
