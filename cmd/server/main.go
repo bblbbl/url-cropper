@@ -4,45 +4,67 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"log"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 	"urls/internal/srv"
-	"urls/pkg/config"
 	"urls/pkg/database"
+	"urls/pkg/etc"
 )
 
 const realiseMode = "release"
 
 func main() {
+	etc.InitLogger()
+
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatalf(".env read failed: %e\n", err)
+		etc.GetLogger().Fatalf(".env read failed: %e\n", err)
 	}
 
-	config.InitConfig()
-	cnf := config.GetConfig()
+	etc.InitConfig()
+	cnf := etc.GetConfig()
 
 	if cnf.App.Mode == realiseMode {
 		gin.SetMode(gin.ReleaseMode)
+		etc.GetLogger().Info("application run in realise mode")
 	}
 
 	database.InitConnection()
 
-	rpcServer := srv.InitRpc()
-	l, err := net.Listen(cnf.Rpc.Network, fmt.Sprintf(":%s", cnf.Rpc.Port))
-	if err != nil {
-		panic(err)
-	}
+	go func() {
+		rpcServer := srv.InitRpc()
+		l, err := net.Listen(cnf.Rpc.Network, fmt.Sprintf(":%s", cnf.Rpc.Port))
+		if err != nil {
+			panic(err)
+		}
 
-	go func(l net.Listener) {
 		if err := rpcServer.Serve(l); err != nil {
 			panic(err)
 		}
-	}(l)
+	}()
 
-	server := srv.InitServer()
+	go func() {
+		server := srv.InitServer()
+		if err = server.Run(fmt.Sprintf(":%s", cnf.Http.Port)); err != nil {
+			panic(err)
+		}
+	}()
 
-	if err = server.Run(fmt.Sprintf(":%s", cnf.Http.Port)); err != nil {
-		panic(err)
-	}
+	term := make(chan os.Signal, 1)
+	signal.Notify(term, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
+
+	<-term
+	terminate()
+}
+
+func terminate() {
+	etc.GetLogger().Info("start shutting down server")
+
+	database.CloseRedisConnection()
+	database.CloseMysqlConnection()
+	etc.FlushLogger()
+
+	etc.GetLogger().Info("server successful shutting down")
 }

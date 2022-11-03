@@ -7,10 +7,9 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/mysql"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"log"
 	"path/filepath"
 	"runtime"
-	"urls/pkg/config"
+	"urls/pkg/etc"
 )
 
 var connection *sql.DB
@@ -24,7 +23,7 @@ func GetConnection() *sql.DB {
 }
 
 func InitConnection() *sql.DB {
-	cnf := config.GetConfig()
+	cnf := etc.GetConfig()
 	connStr := fmt.Sprintf(
 		"%s:%s@tcp(%s:%s)/%s?tls=skip-verify&autocommit=true",
 		cnf.Database.User,
@@ -44,7 +43,7 @@ func InitConnection() *sql.DB {
 
 	driver, err := mysql.WithInstance(conn, &mysql.Config{})
 	if err != nil {
-		log.Fatalf("failed get db driver: %e\n", err)
+		etc.GetLogger().Fatalf("failed get db driver: %e\n", err)
 	}
 
 	migrations, err := migrate.NewWithDatabaseInstance(
@@ -54,16 +53,23 @@ func InitConnection() *sql.DB {
 	)
 
 	if err != nil {
-		log.Fatalf("failed to load migrations: %e\n", err)
+		etc.GetLogger().Fatalf("failed to load migrations: %e\n", err)
 	}
 
 	if err = migrations.Up(); err != nil {
 		if err.Error() != "no change" {
-			log.Fatalf("failed to apply migrations: %e\n", err)
+			etc.GetLogger().Fatalf("failed to apply migrations: %e\n", err)
 		}
 	}
 
 	return conn
+}
+
+func CloseMysqlConnection() {
+	err := connection.Close()
+	if err != nil {
+		etc.GetLogger().Fatalf("failed to close mysql connection: %e\n", err)
+	}
 }
 
 func getMigrationsPath() string {

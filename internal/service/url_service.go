@@ -4,10 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/speps/go-hashids/v2"
-	"log"
 	"sync"
 	"urls/internal/repo"
-	"urls/pkg/config"
+	"urls/pkg/etc"
 )
 
 var hashGenerator *HashGenerator
@@ -16,7 +15,7 @@ type UrlService struct {
 	data    *hashids.HashID
 	cache   repo.UrlCacheRepo
 	urlRepo repo.UrlRepo
-	cnf     *config.Config
+	cnf     *etc.Config
 }
 
 type HashGenerator struct {
@@ -26,7 +25,7 @@ type HashGenerator struct {
 
 func NewUrlService(urlRepo repo.UrlRepo) UrlService {
 	data := hashids.NewData()
-	data.Salt = config.GetConfig().Hash.Salt
+	data.Salt = etc.GetConfig().Hash.Salt
 	data.MinLength = 3
 	hashData, _ := hashids.NewWithData(data)
 
@@ -34,7 +33,7 @@ func NewUrlService(urlRepo repo.UrlRepo) UrlService {
 		data:    hashData,
 		cache:   repo.NewUrlRedisCache(),
 		urlRepo: urlRepo,
-		cnf:     config.GetConfig(),
+		cnf:     etc.GetConfig(),
 	}
 }
 
@@ -61,7 +60,7 @@ func (us *UrlService) CropUrl(url string) string {
 
 	err := us.urlRepo.CreateUrl(url, shortUrl)
 	if err != nil {
-		log.Printf("failed to save url: %s. error: %e", url, err)
+		etc.GetLogger().Warnf("failed to save url: %s. error: %e", url, err)
 	}
 
 	return shortUrl

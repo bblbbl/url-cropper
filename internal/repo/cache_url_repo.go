@@ -3,10 +3,10 @@ package repo
 import (
 	"context"
 	"github.com/go-redis/redis/v9"
-	"log"
 	"sync"
 	"time"
 	"urls/pkg/database"
+	"urls/pkg/etc"
 )
 
 type UrlCacheRepo interface {
@@ -48,12 +48,12 @@ func (c *RedisUrlCache) GetShortUrl(url string) (string, bool) {
 func (c *RedisUrlCache) PutUrl(url, short string) {
 	err := c.conn.Set(c.ctx, url, short, time.Duration(24)*time.Hour).Err()
 	if err != nil {
-		log.Printf("failed to add url to cache: %e", err)
+		etc.GetLogger().Warnf("failed to add url to cache: %e", err)
 	}
 
 	err = c.conn.Set(c.ctx, short, url, time.Duration(24)*time.Hour).Err()
 	if err != nil {
-		log.Printf("failed to add url to cache: %e", err)
+		etc.GetLogger().Warnf("failed to add url to cache: %e", err)
 	}
 }
 
