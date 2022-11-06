@@ -11,9 +11,9 @@ type UrlHandler struct {
 	urlService service.UrlService
 }
 
-func NewUrlHandler() UrlHandler {
+func NewUrlHandler(we *service.WriteExecutor) UrlHandler {
 	return UrlHandler{
-		urlService: service.NewUrlService(repo.NewMysqlUrlRepo()),
+		urlService: service.NewUrlService(repo.NewMysqlUrlRepo(), we),
 	}
 }
 

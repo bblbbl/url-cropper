@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"testing"
+	"urls/internal/service"
 	"urls/pkg/etc"
 	cropper "urls/pkg/rpc/proto"
 )
@@ -60,7 +61,7 @@ func init() {
 
 	lis = bufconn.Listen(bufSize)
 	s := grpc.NewServer()
-	cropper.RegisterUrlCropperServer(s, NewCropperServer())
+	cropper.RegisterUrlCropperServer(s, NewCropperServer(service.NewWriteExecutor().Start()))
 	go func() {
 		if err := s.Serve(lis); err != nil {
 			log.Fatalf("Server exited with error: %v", err)

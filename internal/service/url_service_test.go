@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -16,16 +17,19 @@ import (
 
 func TestUrlService_CropUrl(t *testing.T) {
 	inti()
-	service := NewUrlService(repo.NewMysqlUrlRepo())
+	service := NewUrlService(repo.NewMysqlUrlRepo(), NewWriteExecutor().Start())
 
 	cropped := service.CropUrl("https://google.com")
 
-	assert.Equal(t, "http://localhost:8000/go/2Ep", cropped)
+	cnf := etc.GetConfig()
+	reg := regexp.MustCompile(fmt.Sprintf("%s:\\/\\/%s\\/go\\/(...)", cnf.Http.Schema, cnf.App.Host))
+
+	assert.MatchRegex(t, cropped, reg)
 }
 
 func TestGetLongUrl(t *testing.T) {
 	inti()
-	service := NewUrlService(repo.NewMysqlUrlRepo())
+	service := NewUrlService(repo.NewMysqlUrlRepo(), NewWriteExecutor().Start())
 
 	url := strconv.Itoa(rand.Intn(100000))
 
@@ -43,7 +47,7 @@ func TestGetLongUrl(t *testing.T) {
 
 func TestUrlService_buildFullShortUrl(t *testing.T) {
 	inti()
-	service := NewUrlService(repo.NewMysqlUrlRepo())
+	service := NewUrlService(repo.NewMysqlUrlRepo(), NewWriteExecutor().Start())
 
 	hash := "12345"
 	url := service.buildFullShortUrl(hash)

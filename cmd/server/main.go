@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"urls/internal/service"
 	"urls/internal/srv"
 	"urls/pkg/database"
 	"urls/pkg/etc"
@@ -33,8 +34,10 @@ func main() {
 
 	database.InitConnection()
 
+	writeExecutor := service.NewWriteExecutor().Start()
+
 	go func() {
-		rpcServer := srv.InitRpc()
+		rpcServer := srv.InitRpc(writeExecutor)
 		l, err := net.Listen(cnf.Rpc.Network, fmt.Sprintf(":%s", cnf.Rpc.Port))
 		if err != nil {
 			panic(err)
@@ -46,7 +49,7 @@ func main() {
 	}()
 
 	go func() {
-		server := srv.InitServer()
+		server := srv.InitServer(writeExecutor)
 		if err = server.Run(fmt.Sprintf(":%s", cnf.Http.Port)); err != nil {
 			panic(err)
 		}
@@ -56,15 +59,17 @@ func main() {
 	signal.Notify(term, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 
 	<-term
-	terminate()
+	terminate(writeExecutor)
 }
 
-func terminate() {
+func terminate(we *service.WriteExecutor) {
 	etc.GetLogger().Info("start shutting down server")
 
 	database.CloseRedisConnection()
 	database.CloseMysqlConnection()
 	etc.FlushLogger()
+
+	we.Cancel <- true
 
 	etc.GetLogger().Info("server successful shutting down")
 }

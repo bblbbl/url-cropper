@@ -12,10 +12,11 @@ import (
 var hashGenerator *HashGenerator
 
 type UrlService struct {
-	data    *hashids.HashID
-	cache   repo.UrlCacheRepo
-	urlRepo repo.UrlRepo
-	cnf     *etc.Config
+	executor *WriteExecutor
+	data     *hashids.HashID
+	cache    repo.UrlCacheRepo
+	urlRepo  repo.UrlRepo
+	cnf      *etc.Config
 }
 
 type HashGenerator struct {
@@ -23,17 +24,18 @@ type HashGenerator struct {
 	mu     sync.RWMutex
 }
 
-func NewUrlService(urlRepo repo.UrlRepo) UrlService {
+func NewUrlService(urlRepo repo.UrlRepo, executor *WriteExecutor) UrlService {
 	data := hashids.NewData()
 	data.Salt = etc.GetConfig().Hash.Salt
 	data.MinLength = 3
 	hashData, _ := hashids.NewWithData(data)
 
 	return UrlService{
-		data:    hashData,
-		cache:   repo.NewUrlRedisCache(),
-		urlRepo: urlRepo,
-		cnf:     etc.GetConfig(),
+		executor: executor,
+		data:     hashData,
+		cache:    repo.NewUrlRedisCache(),
+		urlRepo:  urlRepo,
+		cnf:      etc.GetConfig(),
 	}
 }
 
@@ -58,9 +60,8 @@ func (us *UrlService) CropUrl(url string) string {
 	shortUrl := us.buildFullShortUrl(us.createUrlHash())
 	us.cache.PutUrl(url, shortUrl)
 
-	err := us.urlRepo.CreateUrl(url, shortUrl)
-	if err != nil {
-		etc.GetLogger().Warnf("failed to save url: %s. error: %e", url, err)
+	us.executor.JobChan <- CreateUrlJob{
+		shortUrl, url,
 	}
 
 	return shortUrl

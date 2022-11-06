@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"testing"
+	"urls/internal/service"
 	"urls/pkg/database"
 	"urls/pkg/etc"
 )
@@ -86,5 +87,5 @@ func initServer() *gin.Engine {
 	etc.InitLogger()
 	etc.InitConfig()
 
-	return InitServer()
+	return InitServer(service.NewWriteExecutor().Start())
 }

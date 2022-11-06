@@ -12,9 +12,9 @@ type CropperServer struct {
 	urlService service.UrlService
 }
 
-func NewCropperServer() *CropperServer {
+func NewCropperServer(we *service.WriteExecutor) *CropperServer {
 	return &CropperServer{
-		urlService: service.NewUrlService(repo.NewMysqlUrlRepo()),
+		urlService: service.NewUrlService(repo.NewMysqlUrlRepo(), we),
 	}
 }
 

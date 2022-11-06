@@ -3,3 +3,9 @@ proto:
 
 test:
 	go test ./...
+
+test-cover:
+	go test ./... -cover -coverprofile=coverage.out
+
+show-cover:
+	go tool cover -html=coverage.out
