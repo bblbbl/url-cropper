@@ -24,7 +24,6 @@ func main() {
 		etc.GetLogger().Fatalf(".env read failed: %e\n", err)
 	}
 
-	etc.InitConfig()
 	cnf := etc.GetConfig()
 
 	if cnf.App.Mode == realiseMode {
@@ -38,7 +37,7 @@ func main() {
 
 	go func() {
 		rpcServer := srv.InitRpc(writeExecutor)
-		l, err := net.Listen(cnf.Rpc.Network, fmt.Sprintf(":%s", cnf.Rpc.Port))
+		l, err := net.Listen(cnf.Rpc.Network, fmt.Sprintf(":%d", cnf.Rpc.Port))
 		if err != nil {
 			panic(err)
 		}
@@ -50,7 +49,7 @@ func main() {
 
 	go func() {
 		server := srv.InitServer(writeExecutor)
-		if err = server.Run(fmt.Sprintf(":%s", cnf.Http.Port)); err != nil {
+		if err = server.Run(fmt.Sprintf(":%d", cnf.Http.Port)); err != nil {
 			panic(err)
 		}
 	}()

@@ -85,7 +85,6 @@ func initServer() *gin.Engine {
 	}
 
 	etc.InitLogger()
-	etc.InitConfig()
 
 	return InitServer(service.NewWriteExecutor().Start())
 }

@@ -1,97 +1,82 @@
 package etc
 
 import (
+	"gopkg.in/yaml.v2"
+	"io"
 	"os"
-	"strconv"
+	"sync"
+	"urls/pkg/utils"
 )
 
-const defaultRedisDb = 0
-
-var cnf *Config
+var (
+	cnf  *Config
+	once sync.Once
+)
 
 type Config struct {
-	App      App
-	Http     Http
-	Rpc      Rpc
-	Redis    Redis
-	Database Database
-	Hash     Hash
+	App      App      `yaml:"app"`
+	Http     Http     `yaml:"http"`
+	Rpc      Rpc      `yaml:"rpc"`
+	Redis    Redis    `yaml:"redis"`
+	Database Database `yaml:"database"`
+	Hash     Hash     `yaml:"hash"`
 }
 
 type App struct {
-	Mode string
-	Host string
+	Mode string `yaml:"mode"`
+	Host string `yaml:"host"`
 }
 
 type Http struct {
-	Schema string
-	Port   string
+	Schema string `yaml:"schema"`
+	Port   int    `yaml:"port"`
 }
 
 type Rpc struct {
-	Port    string
-	Network string
+	Port    int    `yaml:"port"`
+	Network string `yaml:"network"`
 }
 
 type Redis struct {
-	Host     string
-	Port     string
-	Password string
-	DB       int
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	Password string `yaml:"password"`
+	DB       int    `yaml:"DB"`
 }
 
 type Database struct {
-	User     string
-	Password string
-	Host     string
-	Port     string
-	Database string
+	Port     int    `yaml:"port"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	Host     string `yaml:"host"`
+	Database string `yaml:"database"`
 }
 
 type Hash struct {
-	Salt string
-}
-
-func InitConfig() {
-	if cnf == nil {
-		redisDb, err := strconv.Atoi(os.Getenv("REDIS_DB"))
-		if err != nil {
-			redisDb = defaultRedisDb
-		}
-
-		cnf = &Config{
-			App: App{
-				Mode: os.Getenv("GIN_MODE"),
-				Host: os.Getenv("HOST_URL"),
-			},
-			Http: Http{
-				Schema: os.Getenv("SCHEMA"),
-				Port:   os.Getenv("HTTP_PORT"),
-			},
-			Rpc: Rpc{
-				Port:    os.Getenv("RPC_PORT"),
-				Network: os.Getenv("RPC_NETWORK"),
-			},
-			Redis: Redis{
-				Host:     os.Getenv("REDIS_HOST"),
-				Port:     os.Getenv("REDIS_PORT"),
-				Password: os.Getenv("REDIS_PASSWORD"),
-				DB:       redisDb,
-			},
-			Database: Database{
-				User:     os.Getenv("DB_USER"),
-				Password: os.Getenv("DB_PASSWORD"),
-				Host:     os.Getenv("DB_HOST"),
-				Port:     os.Getenv("DB_PORT"),
-				Database: os.Getenv("DB_DATABASE"),
-			},
-			Hash: Hash{
-				Salt: os.Getenv("HASH_SALT"),
-			},
-		}
-	}
+	Salt string `yaml:"salt"`
 }
 
 func GetConfig() *Config {
+	once.Do(func() {
+		initialise()
+	})
+
 	return cnf
+}
+
+func initialise() {
+	f, err := os.Open("configs/app.yaml")
+	if err != nil {
+		panic("failed open config file")
+	}
+
+	cnfBytes, err := io.ReadAll(f)
+	if err != nil {
+		panic("failed read config file")
+	}
+
+	expanded := os.ExpandEnv(utils.B2S(cnfBytes))
+	if err = yaml.Unmarshal([]byte(expanded), &cnf); err != nil {
+		panic("failed parse app config")
+	}
 }

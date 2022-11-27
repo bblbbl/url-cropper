@@ -1,0 +1,22 @@
+app:
+  mode: ${GIN_MODE}
+  host: ${HOST_URL}
+http:
+  schema: ${SCHEMA}
+  port: ${HTTP_PORT}
+rpc:
+  port: ${RPC_PORT}
+  network: ${RPC_NETWORK}
+redis:
+  host: ${REDIS_HOST}
+  port: ${REDIS_PORT}
+  password: ${REDIS_PASSWORD}
+  db: ${REDIS_DB}
+database:
+  user: ${DB_USER}
+  password: ${DB_PASSWORD}
+  host: ${DB_HOST}
+  port: ${DB_PORT}
+  database: ${DB_DATABASE}
+hash:
+  salt: ${HASH_SALT}

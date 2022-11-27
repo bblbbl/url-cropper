@@ -57,7 +57,6 @@ func init() {
 	}
 
 	etc.InitLogger()
-	etc.InitConfig()
 
 	lis = bufconn.Listen(bufSize)
 	s := grpc.NewServer()

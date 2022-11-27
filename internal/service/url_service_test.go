@@ -69,5 +69,4 @@ func inti() {
 	}
 
 	etc.InitLogger()
-	etc.InitConfig()
 }

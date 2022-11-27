@@ -25,7 +25,7 @@ func GetConnection() *sql.DB {
 func InitConnection() *sql.DB {
 	cnf := etc.GetConfig()
 	connStr := fmt.Sprintf(
-		"%s:%s@tcp(%s:%s)/%s?tls=skip-verify&autocommit=true",
+		"%s:%s@tcp(%s:%d)/%s?tls=skip-verify&autocommit=true",
 		cnf.Database.User,
 		cnf.Database.Password,
 		cnf.Database.Host,
