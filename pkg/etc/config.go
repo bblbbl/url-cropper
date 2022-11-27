@@ -1,6 +1,7 @@
 package etc
 
 import (
+	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v2"
 	"io"
 	"os"
@@ -65,6 +66,11 @@ func GetConfig() *Config {
 }
 
 func initialise() {
+	err := godotenv.Load()
+	if err != nil {
+		GetLogger().Fatalf(".env read failed: %e\n", err)
+	}
+
 	f, err := os.Open("configs/app.yaml")
 	if err != nil {
 		panic("failed open config file")

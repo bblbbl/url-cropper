@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	"net"
 	"os"
 	"os/signal"
@@ -18,11 +17,6 @@ const realiseMode = "release"
 
 func main() {
 	etc.InitLogger()
-
-	err := godotenv.Load()
-	if err != nil {
-		etc.GetLogger().Fatalf(".env read failed: %e\n", err)
-	}
 
 	cnf := etc.GetConfig()
 
@@ -49,7 +43,7 @@ func main() {
 
 	go func() {
 		server := srv.InitServer(writeExecutor)
-		if err = server.Run(fmt.Sprintf(":%d", cnf.Http.Port)); err != nil {
+		if err := server.Run(fmt.Sprintf(":%d", cnf.Http.Port)); err != nil {
 			panic(err)
 		}
 	}()
