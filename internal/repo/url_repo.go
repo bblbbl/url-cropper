@@ -1,13 +1,14 @@
 package repo
 
 import (
-	"database/sql"
+	"github.com/jmoiron/sqlx"
 	"urls/pkg/database"
 )
 
 type Url struct {
-	long  string
-	short string
+	id    int    `db:"id"`
+	long  string `db:"long"`
+	short string `db:"short"`
 }
 
 func (u *Url) GetShort() string {
@@ -21,12 +22,12 @@ func (u *Url) GetLong() string {
 type UrlRepo interface {
 	GetByFull(url string) *Url
 	GetByShort(url string) *Url
-	CreateUrl(short, long string) error
+	CreateUrl(hash, long string)
 	GetLastId() int
 }
 
 type MysqlUrlRepo struct {
-	conn *sql.DB
+	conn *sqlx.DB
 }
 
 func NewMysqlUrlRepo() *MysqlUrlRepo {
@@ -35,52 +36,34 @@ func NewMysqlUrlRepo() *MysqlUrlRepo {
 	}
 }
 
-func (r *MysqlUrlRepo) CreateUrl(long, short string) error {
-	_, err := r.conn.Exec("INSERT INTO urls (`long`, short) VALUES (?, ?)", long, short)
-
-	return err
+func (r *MysqlUrlRepo) CreateUrl(hash, long string) {
+	r.conn.MustExec("INSERT INTO urls (`hash`, `long`) VALUES (?, ?)", hash, long)
 }
 
-func (r *MysqlUrlRepo) GetByFull(url string) *Url {
-	var u Url
-	err := r.conn.
-		QueryRow("SELECT short FROM urls WHERE long = ?", url).
-		Scan(&u.short)
-
+func (r *MysqlUrlRepo) GetByFull(url string) (u *Url) {
+	err := r.conn.Select(u, "SELECT * FROM urls WHERE long = ?", url)
 	if err != nil {
 		return nil
 	}
 
-	u.long = url
-
-	return &u
+	return u
 }
 
-func (r *MysqlUrlRepo) GetByShort(url string) *Url {
-	var u Url
-	err := r.conn.
-		QueryRow("SELECT `long` FROM urls WHERE `short` = ?", url).
-		Scan(&u.long)
-
+func (r *MysqlUrlRepo) GetByShort(url string) (u *Url) {
+	err := r.conn.Select(u, "SELECT * FROM urls WHERE `short` = ?", url)
 	if err != nil {
 		return nil
 	}
 
-	u.short = url
-
-	return &u
+	return u
 }
 
 func (r *MysqlUrlRepo) GetLastId() int {
-	var id int
-
-	err := r.conn.
-		QueryRow("SELECT id FROM urls ORDER BY id DESC LIMIT 1").
-		Scan(&id)
-
+	var url Url
+	err := r.conn.Select(&url, "SELECT id FROM urls ORDER BY id DESC LIMIT 1")
 	if err != nil {
 		return -1
 	}
 
-	return id
+	return url.id
 }

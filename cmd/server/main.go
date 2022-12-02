@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net"
@@ -19,30 +20,30 @@ func main() {
 	etc.InitLogger()
 
 	cnf := etc.GetConfig()
-
 	if cnf.App.Mode == realiseMode {
 		gin.SetMode(gin.ReleaseMode)
 		etc.GetLogger().Info("application run in realise mode")
 	}
 
-	database.InitConnection()
+	database.GetConnection()
 
-	writeExecutor := service.NewWriteExecutor().Start()
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	writeExecutor := service.NewWriteExecutor(ctx).Start()
 
 	go func() {
-		rpcServer := srv.InitRpc(writeExecutor)
+		rpcServer := srv.InitRpc(writeExecutor, ctx)
 		l, err := net.Listen(cnf.Rpc.Network, fmt.Sprintf(":%d", cnf.Rpc.Port))
 		if err != nil {
 			panic(err)
 		}
 
-		if err := rpcServer.Serve(l); err != nil {
+		if err = rpcServer.Serve(l); err != nil {
 			panic(err)
 		}
 	}()
 
 	go func() {
-		server := srv.InitServer(writeExecutor)
+		server := srv.InitServer(writeExecutor, ctx)
 		if err := server.Run(fmt.Sprintf(":%d", cnf.Http.Port)); err != nil {
 			panic(err)
 		}
@@ -52,17 +53,17 @@ func main() {
 	signal.Notify(term, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 
 	<-term
-	terminate(writeExecutor)
+	terminate(cancelFunc)
 }
 
-func terminate(we *service.WriteExecutor) {
+func terminate(cancelFunc context.CancelFunc) {
 	etc.GetLogger().Info("start shutting down server")
 
 	database.CloseRedisConnection()
 	database.CloseMysqlConnection()
 	etc.FlushLogger()
 
-	we.Cancel <- true
+	cancelFunc()
 
 	etc.GetLogger().Info("server successful shutting down")
 }

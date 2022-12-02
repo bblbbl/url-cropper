@@ -1,23 +1,25 @@
 package service
 
 import (
-	"log"
+	"context"
 	"urls/internal/repo"
 )
 
 type CreateUrlJob struct {
-	Long  string
-	Short string
+	Long string
+	Hash string
 }
 
 type WriteExecutor struct {
+	ctx     context.Context
 	repo    repo.UrlRepo
 	JobChan chan CreateUrlJob
 	Cancel  chan bool
 }
 
-func NewWriteExecutor() *WriteExecutor {
+func NewWriteExecutor(ctx context.Context) *WriteExecutor {
 	return &WriteExecutor{
+		ctx:     ctx,
 		repo:    repo.NewMysqlUrlRepo(),
 		JobChan: make(chan CreateUrlJob, 10),
 		Cancel:  make(chan bool),
@@ -29,11 +31,8 @@ func (e *WriteExecutor) Start() *WriteExecutor {
 		for {
 			select {
 			case job := <-e.JobChan:
-				err := e.repo.CreateUrl(job.Short, job.Long)
-				if err != nil {
-					log.Printf("failed to save url in database")
-				}
-			case <-e.Cancel:
+				e.repo.CreateUrl(job.Hash, job.Long)
+			case <-e.ctx.Done():
 				return
 			}
 		}

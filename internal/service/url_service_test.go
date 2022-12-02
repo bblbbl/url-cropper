@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"github.com/go-playground/assert/v2"
 	"github.com/joho/godotenv"
@@ -17,7 +18,7 @@ import (
 
 func TestUrlService_CropUrl(t *testing.T) {
 	inti()
-	service := NewUrlService(repo.NewMysqlUrlRepo(), NewWriteExecutor().Start())
+	service := NewUrlService(repo.NewMysqlUrlRepo(), NewWriteExecutor(context.Background()).Start())
 
 	cropped := service.CropUrl("https://google.com")
 
@@ -29,7 +30,7 @@ func TestUrlService_CropUrl(t *testing.T) {
 
 func TestGetLongUrl(t *testing.T) {
 	inti()
-	service := NewUrlService(repo.NewMysqlUrlRepo(), NewWriteExecutor().Start())
+	service := NewUrlService(repo.NewMysqlUrlRepo(), NewWriteExecutor(context.Background()).Start())
 
 	url := strconv.Itoa(rand.Intn(100000))
 
@@ -47,7 +48,7 @@ func TestGetLongUrl(t *testing.T) {
 
 func TestUrlService_buildFullShortUrl(t *testing.T) {
 	inti()
-	service := NewUrlService(repo.NewMysqlUrlRepo(), NewWriteExecutor().Start())
+	service := NewUrlService(repo.NewMysqlUrlRepo(), NewWriteExecutor(context.Background()).Start())
 
 	hash := "12345"
 	url := service.buildFullShortUrl(hash)

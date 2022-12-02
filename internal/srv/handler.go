@@ -1,6 +1,7 @@
 package srv
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"urls/internal/repo"
@@ -11,9 +12,9 @@ type UrlHandler struct {
 	urlService service.UrlService
 }
 
-func NewUrlHandler(we *service.WriteExecutor) UrlHandler {
+func NewUrlHandler(we *service.WriteExecutor, ctx context.Context) UrlHandler {
 	return UrlHandler{
-		urlService: service.NewUrlService(repo.NewMysqlUrlRepo(), we),
+		urlService: service.NewUrlService(repo.NewMysqlUrlRepo(), we, ctx),
 	}
 }
 

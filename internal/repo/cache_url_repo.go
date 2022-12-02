@@ -20,10 +20,10 @@ type RedisUrlCache struct {
 	ctx  context.Context
 }
 
-func NewUrlRedisCache() *RedisUrlCache {
+func NewUrlRedisCache(ctx context.Context) *RedisUrlCache {
 	return &RedisUrlCache{
 		conn: database.GetRedisConnection(),
-		ctx:  database.GetCtx(),
+		ctx:  ctx,
 	}
 }
 
@@ -57,7 +57,10 @@ func (c *RedisUrlCache) PutUrl(url, short string) {
 	}
 }
 
-var hashCache *HashCache
+var (
+	hashCache *HashCache
+	once      sync.Once
+)
 
 type HashCache struct {
 	urlCache      urlCache
@@ -73,8 +76,8 @@ type shortUrlCache struct {
 	mu   sync.RWMutex
 }
 
-func GetUrlHashCache() *HashCache {
-	if hashCache == nil {
+func UrlHashCache() *HashCache {
+	once.Do(func() {
 		hashCache = &HashCache{
 			urlCache: urlCache{
 				data: make(map[string]string),
@@ -83,7 +86,7 @@ func GetUrlHashCache() *HashCache {
 				data: make(map[string]string),
 			},
 		}
-	}
+	})
 
 	return hashCache
 }

@@ -1,0 +1,1 @@
+ALTER TABLE urls RENAME COLUMN `hash` TO `short`;

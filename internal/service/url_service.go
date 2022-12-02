@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/speps/go-hashids/v2"
@@ -24,7 +25,7 @@ type HashGenerator struct {
 	mu     sync.RWMutex
 }
 
-func NewUrlService(urlRepo repo.UrlRepo, executor *WriteExecutor) UrlService {
+func NewUrlService(urlRepo repo.UrlRepo, executor *WriteExecutor, ctx context.Context) UrlService {
 	data := hashids.NewData()
 	data.Salt = etc.GetConfig().Hash.Salt
 	data.MinLength = 3
@@ -33,7 +34,7 @@ func NewUrlService(urlRepo repo.UrlRepo, executor *WriteExecutor) UrlService {
 	return UrlService{
 		executor: executor,
 		data:     hashData,
-		cache:    repo.NewUrlRedisCache(),
+		cache:    repo.NewUrlRedisCache(ctx),
 		urlRepo:  urlRepo,
 		cnf:      etc.GetConfig(),
 	}

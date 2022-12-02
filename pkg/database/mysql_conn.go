@@ -1,28 +1,34 @@
 package database
 
 import (
-	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/mysql"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jmoiron/sqlx"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"urls/pkg/etc"
 )
 
-var connection *sql.DB
+const driver = "mysql"
 
-func GetConnection() *sql.DB {
-	if connection == nil {
-		connection = InitConnection()
-	}
+var (
+	connection *sqlx.DB
+	mysqlOnce  sync.Once
+)
+
+func GetConnection() *sqlx.DB {
+	mysqlOnce.Do(func() {
+		connection = initialise()
+	})
 
 	return connection
 }
 
-func InitConnection() *sql.DB {
+func initialise() *sqlx.DB {
 	cnf := etc.GetConfig()
 	connStr := fmt.Sprintf(
 		"%s:%s@tcp(%s:%d)/%s?tls=skip-verify&autocommit=true",
@@ -33,15 +39,19 @@ func InitConnection() *sql.DB {
 		cnf.Database.Database,
 	)
 
-	conn, err := sql.Open("mysql", connStr)
+	conn, err := sqlx.Connect(driver, connStr)
 	if err != nil {
-		panic(err)
+		etc.GetLogger().Fatalf("failed get db connection: %e\n", err)
+	}
+
+	if err = conn.Ping(); err != nil {
+		etc.GetLogger().Fatalf("failed get make mysql ping: %e\n", err)
 	}
 
 	conn.SetMaxOpenConns(10)
 	conn.SetMaxIdleConns(10)
 
-	driver, err := mysql.WithInstance(conn, &mysql.Config{})
+	d, err := mysql.WithInstance(conn.DB, &mysql.Config{})
 	if err != nil {
 		etc.GetLogger().Fatalf("failed get db driver: %e\n", err)
 	}
@@ -49,7 +59,7 @@ func InitConnection() *sql.DB {
 	migrations, err := migrate.NewWithDatabaseInstance(
 		getMigrationsPath(),
 		cnf.Database.Database,
-		driver,
+		d,
 	)
 
 	if err != nil {
@@ -73,8 +83,8 @@ func CloseMysqlConnection() {
 }
 
 func getMigrationsPath() string {
-	_, b, _, _ := runtime.Caller(0)
-	rootPath := filepath.Join(filepath.Dir(b), "../..")
+	_, f, _, _ := runtime.Caller(0)
+	rootPath := filepath.Join(filepath.Dir(f), "../..")
 
 	return fmt.Sprintf("file:///%s/migrations", rootPath)
 }

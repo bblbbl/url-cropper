@@ -60,7 +60,8 @@ func init() {
 
 	lis = bufconn.Listen(bufSize)
 	s := grpc.NewServer()
-	cropper.RegisterUrlCropperServer(s, NewCropperServer(service.NewWriteExecutor().Start()))
+	ctx := context.TODO()
+	cropper.RegisterUrlCropperServer(s, NewCropperServer(service.NewWriteExecutor(ctx).Start(), ctx))
 	go func() {
 		if err := s.Serve(lis); err != nil {
 			log.Fatalf("Server exited with error: %v", err)
