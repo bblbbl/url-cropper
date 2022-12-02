@@ -10,8 +10,8 @@ import (
 )
 
 type UrlCacheRepo interface {
-	GetUrl(short string) (string, bool)
-	GetShortUrl(url string) (string, bool)
+	GetUrl(hash string) (string, bool)
+	HashByUrl(url string) (string, bool)
 	PutUrl(url, short string)
 }
 
@@ -27,8 +27,8 @@ func NewUrlRedisCache(ctx context.Context) *RedisUrlCache {
 	}
 }
 
-func (c *RedisUrlCache) GetUrl(short string) (string, bool) {
-	str, err := c.conn.Get(c.ctx, short).Result()
+func (c *RedisUrlCache) GetUrl(hash string) (string, bool) {
+	str, err := c.conn.Get(c.ctx, hash).Result()
 	if err != nil {
 		return "", false
 	}
@@ -36,7 +36,7 @@ func (c *RedisUrlCache) GetUrl(short string) (string, bool) {
 	return str, true
 }
 
-func (c *RedisUrlCache) GetShortUrl(url string) (string, bool) {
+func (c *RedisUrlCache) HashByUrl(url string) (string, bool) {
 	str, err := c.conn.Get(c.ctx, url).Result()
 	if err != nil {
 		return "", false
@@ -63,15 +63,15 @@ var (
 )
 
 type HashCache struct {
-	urlCache      urlCache
-	shortUrlCache shortUrlCache
+	urlCache     urlCache
+	hashUrlCache hashUrlCache
 }
 
 type urlCache struct {
 	data map[string]string
 	mu   sync.RWMutex
 }
-type shortUrlCache struct {
+type hashUrlCache struct {
 	data map[string]string
 	mu   sync.RWMutex
 }
@@ -82,7 +82,7 @@ func UrlHashCache() *HashCache {
 			urlCache: urlCache{
 				data: make(map[string]string),
 			},
-			shortUrlCache: shortUrlCache{
+			hashUrlCache: hashUrlCache{
 				data: make(map[string]string),
 			},
 		}
@@ -91,33 +91,33 @@ func UrlHashCache() *HashCache {
 	return hashCache
 }
 
-func (c *HashCache) GetUrl(short string) (string, bool) {
+func (c *HashCache) GetUrl(hash string) (string, bool) {
 	c.urlCache.mu.RLock()
 	defer c.urlCache.mu.RUnlock()
 
-	v, ok := c.urlCache.data[short]
+	v, ok := c.urlCache.data[hash]
 
 	return v, ok
 }
 
-func (c *HashCache) GetShortUrl(url string) (string, bool) {
-	c.shortUrlCache.mu.RLock()
-	defer c.shortUrlCache.mu.RUnlock()
+func (c *HashCache) HashByUrl(url string) (string, bool) {
+	c.hashUrlCache.mu.RLock()
+	defer c.hashUrlCache.mu.RUnlock()
 
-	v, ok := c.shortUrlCache.data[url]
+	v, ok := c.hashUrlCache.data[url]
 
 	return v, ok
 }
 
-func (c *HashCache) PutUrl(url, short string) {
+func (c *HashCache) PutUrl(hash, url string) {
 	defer func() {
 		c.urlCache.mu.Unlock()
-		c.shortUrlCache.mu.Unlock()
+		c.hashUrlCache.mu.Unlock()
 	}()
 
 	c.urlCache.mu.Lock()
-	c.urlCache.data[short] = url
+	c.urlCache.data[url] = hash
 
-	c.shortUrlCache.mu.Lock()
-	c.shortUrlCache.data[url] = short
+	c.hashUrlCache.mu.Lock()
+	c.hashUrlCache.data[hash] = url
 }

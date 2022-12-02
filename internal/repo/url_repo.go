@@ -6,23 +6,22 @@ import (
 )
 
 type Url struct {
-	id    int    `db:"id"`
-	long  string `db:"long"`
-	short string `db:"short"`
+	Id   uint8  `db:"id"`
+	Long string `db:"long"`
+	Hash string `db:"hash"`
 }
 
-func (u *Url) GetShort() string {
-	return u.short
-}
-
-func (u *Url) GetLong() string {
-	return u.long
+func NewUrl(hash, long string) Url {
+	return Url{
+		Hash: hash,
+		Long: long,
+	}
 }
 
 type UrlRepo interface {
 	GetByFull(url string) *Url
-	GetByShort(url string) *Url
-	CreateUrl(hash, long string)
+	GetByHash(url string) *Url
+	CreateUrl(url Url) error
 	GetLastId() int
 }
 
@@ -36,34 +35,36 @@ func NewMysqlUrlRepo() *MysqlUrlRepo {
 	}
 }
 
-func (r *MysqlUrlRepo) CreateUrl(hash, long string) {
-	r.conn.MustExec("INSERT INTO urls (`hash`, `long`) VALUES (?, ?)", hash, long)
+func (r *MysqlUrlRepo) CreateUrl(url Url) error {
+	_, err := r.conn.NamedExec("INSERT INTO urls (`hash`, `long`) VALUES (:hash, :long)", url)
+
+	return err
 }
 
-func (r *MysqlUrlRepo) GetByFull(url string) (u *Url) {
-	err := r.conn.Select(u, "SELECT * FROM urls WHERE long = ?", url)
+func (r *MysqlUrlRepo) GetByFull(url string) *Url {
+	var u Url
+	err := r.conn.Get(&u, "SELECT * FROM urls WHERE long = ? LIMIT 1", url)
 	if err != nil {
 		return nil
 	}
 
-	return u
+	return &u
 }
 
-func (r *MysqlUrlRepo) GetByShort(url string) (u *Url) {
-	err := r.conn.Select(u, "SELECT * FROM urls WHERE `short` = ?", url)
+func (r *MysqlUrlRepo) GetByHash(hash string) *Url {
+	var u Url
+	err := r.conn.Get(&u, "SELECT * FROM urls WHERE `hash` = ? LIMIT 1", hash)
 	if err != nil {
 		return nil
 	}
 
-	return u
+	return &u
 }
 
-func (r *MysqlUrlRepo) GetLastId() int {
-	var url Url
-	err := r.conn.Select(&url, "SELECT id FROM urls ORDER BY id DESC LIMIT 1")
-	if err != nil {
-		return -1
+func (r *MysqlUrlRepo) GetLastId() (result int) {
+	if err := r.conn.QueryRow("SELECT MAX(id) from urls").Scan(&result); err == nil {
+		return result
 	}
 
-	return url.id
+	return 0
 }

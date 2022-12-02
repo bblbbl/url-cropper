@@ -10,7 +10,10 @@ import (
 	"urls/pkg/etc"
 )
 
-var hashGenerator *HashGenerator
+var (
+	generator     *HashGenerator
+	generatorOnce sync.Once
+)
 
 type UrlService struct {
 	executor *WriteExecutor
@@ -23,6 +26,14 @@ type UrlService struct {
 type HashGenerator struct {
 	lastId int
 	mu     sync.RWMutex
+}
+
+func Generator() *HashGenerator {
+	generatorOnce.Do(func() {
+		generator = &HashGenerator{}
+	})
+
+	return generator
 }
 
 func NewUrlService(urlRepo repo.UrlRepo, executor *WriteExecutor, ctx context.Context) UrlService {
@@ -40,60 +51,52 @@ func NewUrlService(urlRepo repo.UrlRepo, executor *WriteExecutor, ctx context.Co
 	}
 }
 
-func GetHashGenerator() *HashGenerator {
-	if hashGenerator == nil {
-		hashGenerator = &HashGenerator{}
-	}
-
-	return hashGenerator
-}
-
 func (us *UrlService) CropUrl(url string) string {
-	if v, ok := us.cache.GetShortUrl(url); ok {
-		return v
+	if v, ok := us.cache.HashByUrl(url); ok {
+		return us.buildFullShortUrl(v)
 	}
 
 	existUrl := us.urlRepo.GetByFull(url)
 	if existUrl != nil {
-		return existUrl.GetShort()
+		return existUrl.Hash
 	}
 
-	shortUrl := us.buildFullShortUrl(us.createUrlHash())
-	us.cache.PutUrl(url, shortUrl)
+	hash := us.createUrlHash()
+	us.cache.PutUrl(hash, url)
 
 	us.executor.JobChan <- CreateUrlJob{
-		shortUrl, url,
+		url,
+		hash,
 	}
 
-	return shortUrl
+	return us.buildFullShortUrl(hash)
 }
 
 func (us *UrlService) GetLongUrl(hash string) (string, error) {
-	shortUrl := us.buildFullShortUrl(hash)
-	if v, ok := us.cache.GetUrl(shortUrl); ok {
-		return v, nil
-	}
+	//if v, ok := us.cache.GetUrl(hash); ok {
+	//	return v, nil
+	//}
 
-	url := us.urlRepo.GetByShort(shortUrl)
+	url := us.urlRepo.GetByHash(hash)
 	if url == nil {
 		return "", errors.New("short url not found")
 	}
 
-	return url.GetLong(), nil
+	return url.Long, nil
 }
 
 func (us *UrlService) createUrlHash() string {
-	generator := GetHashGenerator()
+	g := Generator()
 
-	generator.mu.Lock()
-	defer generator.mu.Unlock()
+	g.mu.Lock()
+	defer g.mu.Unlock()
 
-	if generator.lastId == 0 {
-		generator.lastId = us.urlRepo.GetLastId()
+	if g.lastId == 0 {
+		g.lastId = us.urlRepo.GetLastId()
 	}
 
-	hash, _ := us.data.Encode([]int{generator.lastId + 1})
-	generator.lastId += 1
+	hash, _ := us.data.Encode([]int{g.lastId + 1})
+	g.lastId += 1
 
 	return hash
 }

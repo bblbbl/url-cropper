@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"urls/internal/repo"
+	"urls/pkg/etc"
 )
 
 type CreateUrlJob struct {
@@ -31,7 +32,9 @@ func (e *WriteExecutor) Start() *WriteExecutor {
 		for {
 			select {
 			case job := <-e.JobChan:
-				e.repo.CreateUrl(job.Hash, job.Long)
+				if err := e.repo.CreateUrl(repo.NewUrl(job.Hash, job.Long)); err != nil {
+					etc.GetLogger().Error("failed to save url: " + job.Long)
+				}
 			case <-e.ctx.Done():
 				return
 			}
