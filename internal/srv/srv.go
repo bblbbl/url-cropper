@@ -4,28 +4,29 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
-	"urls/internal/service"
+	"urls/internal/messaging"
+	"urls/internal/repo"
 	"urls/pkg/etc"
 	cropper "urls/pkg/rpc/proto"
 	"urls/pkg/rpc/srv"
 )
 
-func InitServer(we *service.WriteExecutor, ctx context.Context) *gin.Engine {
+func InitServer(ctx context.Context, repo repo.UrlRepo, producer messaging.UrlProducer) *gin.Engine {
 	server := gin.Default()
 	err := server.SetTrustedProxies([]string{})
 	if err != nil {
 		etc.GetLogger().Fatalf("failed set trust proxies. err: %s\n", err)
 	}
 
-	server.POST("/crop", NewUrlHandler(we, ctx).Crop)
-	server.GET("/go/:hash", NewUrlHandler(we, ctx).Redirect)
+	server.POST("/crop", NewUrlHandlerCrop(ctx, repo, producer).Crop)
+	server.GET("/go/:hash", NewUrlHandlerRedirect(ctx, repo).Redirect)
 
 	return server
 }
 
-func InitRpc(we *service.WriteExecutor, ctx context.Context) *grpc.Server {
+func InitRpc(ctx context.Context, repo repo.UrlRepo, producer messaging.UrlProducer) *grpc.Server {
 	server := grpc.NewServer()
-	cropperServer := srv.NewCropperServer(we, ctx)
+	cropperServer := srv.NewCropperServer(ctx, repo, producer)
 
 	cropper.RegisterUrlCropperServer(server, cropperServer)
 

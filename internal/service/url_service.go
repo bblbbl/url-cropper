@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/speps/go-hashids/v2"
 	"sync"
+	"urls/internal/messaging"
 	"urls/internal/repo"
 	"urls/pkg/etc"
 )
@@ -16,7 +17,7 @@ var (
 )
 
 type UrlService struct {
-	executor *WriteExecutor
+	producer messaging.UrlProducer
 	data     *hashids.HashID
 	cache    repo.UrlCacheRepo
 	urlRepo  repo.UrlRepo
@@ -36,18 +37,16 @@ func Generator() *HashGenerator {
 	return generator
 }
 
-func NewUrlService(urlRepo repo.UrlRepo, executor *WriteExecutor, ctx context.Context) UrlService {
+func NewUrlService(ctx context.Context) *UrlService {
 	data := hashids.NewData()
 	data.Salt = etc.GetConfig().Hash.Salt
 	data.MinLength = 3
 	hashData, _ := hashids.NewWithData(data)
 
-	return UrlService{
-		executor: executor,
-		data:     hashData,
-		cache:    repo.NewUrlRedisCache(ctx),
-		urlRepo:  urlRepo,
-		cnf:      etc.GetConfig(),
+	return &UrlService{
+		data:  hashData,
+		cache: repo.NewUrlRedisCache(ctx),
+		cnf:   etc.GetConfig(),
 	}
 }
 
@@ -64,18 +63,19 @@ func (us *UrlService) CropUrl(url string) string {
 	hash := us.createUrlHash()
 	us.cache.PutUrl(hash, url)
 
-	us.executor.JobChan <- CreateUrlJob{
-		url,
-		hash,
+	urlModel := repo.NewUrl(hash, url)
+	err := us.producer.PutUrlMessage(urlModel)
+	if err != nil {
+		_ = us.urlRepo.CreateUrl(urlModel)
 	}
 
 	return us.buildFullShortUrl(hash)
 }
 
 func (us *UrlService) GetLongUrl(hash string) (string, error) {
-	//if v, ok := us.cache.GetUrl(hash); ok {
-	//	return v, nil
-	//}
+	if v, ok := us.cache.GetUrl(hash); ok {
+		return v, nil
+	}
 
 	url := us.urlRepo.GetByHash(hash)
 	if url == nil {
@@ -103,4 +103,16 @@ func (us *UrlService) createUrlHash() string {
 
 func (us *UrlService) buildFullShortUrl(hash string) string {
 	return fmt.Sprintf("%s://%s/go/%s", us.cnf.Http.Schema, us.cnf.App.Host, hash)
+}
+
+func (us *UrlService) WithUrlRepo(urlRepo repo.UrlRepo) *UrlService {
+	us.urlRepo = urlRepo
+
+	return us
+}
+
+func (us *UrlService) WithProducer(producer messaging.UrlProducer) *UrlService {
+	us.producer = producer
+
+	return us
 }

@@ -2,19 +2,20 @@ package repo
 
 import (
 	"github.com/jmoiron/sqlx"
+	"net/url"
 	"urls/pkg/database"
 )
 
 type Url struct {
-	Id   uint8  `db:"id"`
-	Long string `db:"long"`
-	Hash string `db:"hash"`
+	Id   uint8  `db:"id" json:"_"`
+	Long string `db:"long" json:"long"`
+	Hash string `db:"hash" json:"hash"`
 }
 
 func NewUrl(hash, long string) Url {
 	return Url{
 		Hash: hash,
-		Long: long,
+		Long: url.QueryEscape(long),
 	}
 }
 
@@ -23,6 +24,7 @@ type UrlRepo interface {
 	GetByHash(url string) *Url
 	CreateUrl(url Url) error
 	GetLastId() int
+	BatchCreateUrl(urls []Url) error
 }
 
 type MysqlUrlRepo struct {
@@ -33,6 +35,12 @@ func NewMysqlUrlRepo() *MysqlUrlRepo {
 	return &MysqlUrlRepo{
 		conn: database.GetConnection(),
 	}
+}
+
+func (r *MysqlUrlRepo) BatchCreateUrl(urls []Url) error {
+	_, err := r.conn.NamedExec("INSERT INTO urls (`hash`, `long`) VALUES (:hash, :long)", urls)
+
+	return err
 }
 
 func (r *MysqlUrlRepo) CreateUrl(url Url) error {

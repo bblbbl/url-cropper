@@ -8,7 +8,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"urls/internal/service"
+	"urls/internal/messaging"
+	"urls/internal/repo"
 	"urls/internal/srv"
 	"urls/pkg/database"
 	"urls/pkg/etc"
@@ -28,10 +29,15 @@ func main() {
 	database.GetConnection()
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
-	writeExecutor := service.NewWriteExecutor(ctx).Start()
+
+	urlRep := repo.NewMysqlUrlRepo()
+	urlProducer, err := messaging.NewKafkaUrlProducer(ctx)
+	if err != nil {
+		panic(err)
+	}
 
 	go func() {
-		rpcServer := srv.InitRpc(writeExecutor, ctx)
+		rpcServer := srv.InitRpc(ctx, urlRep, urlProducer)
 		l, err := net.Listen(cnf.Rpc.Network, fmt.Sprintf(":%d", cnf.Rpc.Port))
 		if err != nil {
 			panic(err)
@@ -43,7 +49,7 @@ func main() {
 	}()
 
 	go func() {
-		server := srv.InitServer(writeExecutor, ctx)
+		server := srv.InitServer(ctx, urlRep, urlProducer)
 		if err := server.Run(fmt.Sprintf(":%d", cnf.Http.Port)); err != nil {
 			panic(err)
 		}

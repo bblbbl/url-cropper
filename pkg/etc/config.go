@@ -21,6 +21,7 @@ type Config struct {
 	Redis    Redis    `yaml:"redis"`
 	Database Database `yaml:"database"`
 	Hash     Hash     `yaml:"hash"`
+	Kafka    Kafka    `yaml:"kafka"`
 }
 
 type App struct {
@@ -55,6 +56,11 @@ type Database struct {
 
 type Hash struct {
 	Salt string `yaml:"salt"`
+}
+
+type Kafka struct {
+	Port int    `yaml:"port"`
+	Host string `yaml:"host"`
 }
 
 func GetConfig() *Config {

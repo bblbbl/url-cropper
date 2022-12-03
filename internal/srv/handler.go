@@ -4,17 +4,24 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"urls/internal/messaging"
 	"urls/internal/repo"
 	"urls/internal/service"
 )
 
 type UrlHandler struct {
-	urlService service.UrlService
+	urlService *service.UrlService
 }
 
-func NewUrlHandler(we *service.WriteExecutor, ctx context.Context) UrlHandler {
+func NewUrlHandlerCrop(ctx context.Context, repo repo.UrlRepo, producer messaging.UrlProducer) UrlHandler {
 	return UrlHandler{
-		urlService: service.NewUrlService(repo.NewMysqlUrlRepo(), we, ctx),
+		urlService: service.NewUrlService(ctx).WithUrlRepo(repo).WithProducer(producer),
+	}
+}
+
+func NewUrlHandlerRedirect(ctx context.Context, repo repo.UrlRepo) UrlHandler {
+	return UrlHandler{
+		urlService: service.NewUrlService(ctx).WithUrlRepo(repo),
 	}
 }
 
