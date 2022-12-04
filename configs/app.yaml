@@ -13,11 +13,18 @@ redis:
   password: ${REDIS_PASSWORD}
   db: ${REDIS_DB}
 database:
-  user: ${DB_USER}
-  password: ${DB_PASSWORD}
-  host: ${DB_HOST}
-  port: ${DB_PORT}
-  database: ${DB_DATABASE}
+  master:
+    user: ${DB_USER}
+    password: ${DB_PASSWORD}
+    host: ${DB_HOST}
+    port: ${DB_PORT}
+    database: ${DB_DATABASE}
+  slave:
+    user: ${SLAVE_DB_USER}
+    password: ${SLAVE_DB_PASSWORD}
+    host: ${SLAVE_DB_HOST}
+    port: ${SLAVE_DB_PORT}
+    database: ${SLAVE_DB_DATABASE}
 hash:
   salt: ${HASH_SALT}
 kafka:

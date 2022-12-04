@@ -13,15 +13,20 @@ type UrlHandler struct {
 	urlService *service.UrlService
 }
 
-func NewUrlHandlerCrop(ctx context.Context, repo repo.UrlRepo, producer messaging.UrlProducer) UrlHandler {
+func NewUrlHandlerCrop(
+	ctx context.Context,
+	readRepo repo.UrlReadRepo,
+	writeRepo repo.UrlWriteRepo,
+	producer messaging.UrlProducer,
+) UrlHandler {
 	return UrlHandler{
-		urlService: service.NewUrlService(ctx).WithUrlRepo(repo).WithProducer(producer),
+		urlService: service.NewUrlService(ctx).WithUrlReadRepo(readRepo).WithUrlWriteRepo(writeRepo).WithProducer(producer),
 	}
 }
 
-func NewUrlHandlerRedirect(ctx context.Context, repo repo.UrlRepo) UrlHandler {
+func NewUrlHandlerRedirect(ctx context.Context, repo repo.UrlReadRepo) UrlHandler {
 	return UrlHandler{
-		urlService: service.NewUrlService(ctx).WithUrlRepo(repo),
+		urlService: service.NewUrlService(ctx).WithUrlReadRepo(repo),
 	}
 }
 

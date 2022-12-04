@@ -26,18 +26,18 @@ func main() {
 		etc.GetLogger().Info("application run in realise mode")
 	}
 
-	database.GetConnection()
-
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
-	urlRep := repo.NewMysqlUrlRepo()
 	urlProducer, err := messaging.NewKafkaUrlProducer(ctx)
 	if err != nil {
 		panic(err)
 	}
 
+	urlReadRep := repo.NewMysqlUrlReadRepo()
+	urlWriteRep := repo.NewMysqlUrlWriteRepo()
+
 	go func() {
-		rpcServer := srv.InitRpc(ctx, urlRep, urlProducer)
+		rpcServer := srv.InitRpc(ctx, urlReadRep, urlWriteRep, urlProducer)
 		l, err := net.Listen(cnf.Rpc.Network, fmt.Sprintf(":%d", cnf.Rpc.Port))
 		if err != nil {
 			panic(err)
@@ -49,7 +49,7 @@ func main() {
 	}()
 
 	go func() {
-		server := srv.InitServer(ctx, urlRep, urlProducer)
+		server := srv.InitServer(ctx, urlReadRep, urlWriteRep, urlProducer)
 		if err := server.Run(fmt.Sprintf(":%d", cnf.Http.Port)); err != nil {
 			panic(err)
 		}
@@ -66,7 +66,8 @@ func terminate(cancelFunc context.CancelFunc) {
 	etc.GetLogger().Info("start shutting down server")
 
 	database.CloseRedisConnection()
-	database.CloseMysqlConnection()
+	database.CloseMysqlReadConnection()
+	database.CloseMysqlWriteConnection()
 	etc.FlushLogger()
 
 	cancelFunc()

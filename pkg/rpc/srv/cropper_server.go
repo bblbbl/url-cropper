@@ -13,9 +13,9 @@ type CropperServer struct {
 	urlService *service.UrlService
 }
 
-func NewCropperServer(ctx context.Context, repo repo.UrlRepo, producer messaging.UrlProducer) *CropperServer {
+func NewCropperServer(ctx context.Context, readRepo repo.UrlReadRepo, writeRepo repo.UrlWriteRepo, producer messaging.UrlProducer) *CropperServer {
 	return &CropperServer{
-		urlService: service.NewUrlService(ctx).WithUrlRepo(repo).WithProducer(producer),
+		urlService: service.NewUrlService(ctx).WithUrlReadRepo(readRepo).WithUrlWriteRepo(writeRepo).WithProducer(producer),
 	}
 }
 

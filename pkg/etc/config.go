@@ -47,11 +47,20 @@ type Redis struct {
 }
 
 type Database struct {
-	Port     int    `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	Host     string `yaml:"host"`
-	Database string `yaml:"database"`
+	Master struct {
+		Port     int    `yaml:"port"`
+		User     string `yaml:"user"`
+		Password string `yaml:"password"`
+		Host     string `yaml:"host"`
+		Database string `yaml:"database"`
+	} `yaml:"master"`
+	Slave struct {
+		Port     int    `yaml:"port"`
+		User     string `yaml:"user"`
+		Password string `yaml:"password"`
+		Host     string `yaml:"host"`
+		Database string `yaml:"database"`
+	} `yaml:"slave"`
 }
 
 type Hash struct {

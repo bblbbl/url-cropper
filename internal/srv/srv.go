@@ -11,22 +11,22 @@ import (
 	"urls/pkg/rpc/srv"
 )
 
-func InitServer(ctx context.Context, repo repo.UrlRepo, producer messaging.UrlProducer) *gin.Engine {
+func InitServer(ctx context.Context, readRepo repo.UrlReadRepo, writeRepo repo.UrlWriteRepo, producer messaging.UrlProducer) *gin.Engine {
 	server := gin.Default()
 	err := server.SetTrustedProxies([]string{})
 	if err != nil {
 		etc.GetLogger().Fatalf("failed set trust proxies. err: %s\n", err)
 	}
 
-	server.POST("/crop", NewUrlHandlerCrop(ctx, repo, producer).Crop)
-	server.GET("/go/:hash", NewUrlHandlerRedirect(ctx, repo).Redirect)
+	server.POST("/crop", NewUrlHandlerCrop(ctx, readRepo, writeRepo, producer).Crop)
+	server.GET("/go/:hash", NewUrlHandlerRedirect(ctx, readRepo).Redirect)
 
 	return server
 }
 
-func InitRpc(ctx context.Context, repo repo.UrlRepo, producer messaging.UrlProducer) *grpc.Server {
+func InitRpc(ctx context.Context, readRepo repo.UrlReadRepo, writeRepo repo.UrlWriteRepo, producer messaging.UrlProducer) *grpc.Server {
 	server := grpc.NewServer()
-	cropperServer := srv.NewCropperServer(ctx, repo, producer)
+	cropperServer := srv.NewCropperServer(ctx, readRepo, writeRepo, producer)
 
 	cropper.RegisterUrlCropperServer(server, cropperServer)
 

@@ -17,11 +17,12 @@ var (
 )
 
 type UrlService struct {
-	producer messaging.UrlProducer
-	data     *hashids.HashID
-	cache    repo.UrlCacheRepo
-	urlRepo  repo.UrlRepo
-	cnf      *etc.Config
+	producer     messaging.UrlProducer
+	data         *hashids.HashID
+	cache        repo.UrlCacheRepo
+	urlReadRepo  repo.UrlReadRepo
+	urlWriteRepo repo.UrlWriteRepo
+	cnf          *etc.Config
 }
 
 type HashGenerator struct {
@@ -55,7 +56,7 @@ func (us *UrlService) CropUrl(url string) string {
 		return us.buildFullShortUrl(v)
 	}
 
-	existUrl := us.urlRepo.GetByFull(url)
+	existUrl := us.urlReadRepo.GetByFull(url)
 	if existUrl != nil {
 		return existUrl.Hash
 	}
@@ -66,7 +67,7 @@ func (us *UrlService) CropUrl(url string) string {
 	urlModel := repo.NewUrl(hash, url)
 	err := us.producer.PutUrlMessage(urlModel)
 	if err != nil {
-		_ = us.urlRepo.CreateUrl(urlModel)
+		_ = us.urlWriteRepo.CreateUrl(urlModel)
 	}
 
 	return us.buildFullShortUrl(hash)
@@ -77,7 +78,7 @@ func (us *UrlService) GetLongUrl(hash string) (string, error) {
 		return v, nil
 	}
 
-	url := us.urlRepo.GetByHash(hash)
+	url := us.urlReadRepo.GetByHash(hash)
 	if url == nil {
 		return "", errors.New("short url not found")
 	}
@@ -92,7 +93,7 @@ func (us *UrlService) createUrlHash() string { // todo: change hashing method
 	defer g.mu.Unlock()
 
 	if g.lastId == 0 {
-		g.lastId = us.urlRepo.GetLastId()
+		g.lastId = us.urlReadRepo.GetLastId()
 	}
 
 	hash, _ := us.data.Encode([]int{g.lastId + 1})
@@ -105,8 +106,14 @@ func (us *UrlService) buildFullShortUrl(hash string) string {
 	return fmt.Sprintf("%s://%s/go/%s", us.cnf.Http.Schema, us.cnf.App.Host, hash)
 }
 
-func (us *UrlService) WithUrlRepo(urlRepo repo.UrlRepo) *UrlService {
-	us.urlRepo = urlRepo
+func (us *UrlService) WithUrlReadRepo(urlRepo repo.UrlReadRepo) *UrlService {
+	us.urlReadRepo = urlRepo
+
+	return us
+}
+
+func (us *UrlService) WithUrlWriteRepo(urlRepo repo.UrlWriteRepo) *UrlService {
+	us.urlWriteRepo = urlRepo
 
 	return us
 }

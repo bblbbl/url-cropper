@@ -22,7 +22,7 @@ func main() {
 
 	go consumer.ListenMessages()
 
-	buff := buffer.NewUrlBuffer(repo.NewMysqlUrlRepo())
+	buff := buffer.NewUrlBuffer(repo.NewMysqlUrlWriteRepo())
 
 	go func(buff *buffer.UrlBuffer) {
 		for url := range consumer.Messages() {
@@ -35,6 +35,7 @@ func main() {
 			select {
 			case <-ctx.Done():
 				buff.Flush(true)
+				buff.DoneFlush() <- struct{}{}
 				break
 			default:
 				if flushed := buff.Flush(false); !flushed {
@@ -50,12 +51,12 @@ func main() {
 	signal.Notify(term, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 
 	<-term
-	terminate(cancelFunc)
+	terminate(cancelFunc, buff.DoneFlush())
 }
 
-func terminate(cancelFunc context.CancelFunc) {
+func terminate(cancelFunc context.CancelFunc, flushChan buffer.FlushChan) {
 	cancelFunc()
-	time.Sleep(2 * time.Second)
+	<-flushChan
 
-	_ = database.GetConnection().Close()
+	database.CloseMysqlWriteConnection()
 }

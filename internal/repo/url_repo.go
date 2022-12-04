@@ -19,37 +19,50 @@ func NewUrl(hash, long string) Url {
 	}
 }
 
-type UrlRepo interface { // todo: separate to write and read (cqrs)
-	GetByFull(url string) *Url
-	GetByHash(url string) *Url
+type UrlWriteRepo interface {
 	CreateUrl(url Url) error
-	GetLastId() int
 	BatchCreateUrl(urls []Url) error
 }
 
-type MysqlUrlRepo struct {
+type UrlReadRepo interface {
+	GetByFull(url string) *Url
+	GetByHash(url string) *Url
+	GetLastId() int
+}
+
+type MysqlUrlReadRepo struct {
 	conn *sqlx.DB
 }
 
-func NewMysqlUrlRepo() *MysqlUrlRepo {
-	return &MysqlUrlRepo{
-		conn: database.GetConnection(),
+type MysqlUrlWriteRepo struct {
+	conn *sqlx.DB
+}
+
+func NewMysqlUrlReadRepo() *MysqlUrlReadRepo {
+	return &MysqlUrlReadRepo{
+		conn: database.GetReadConnection(),
 	}
 }
 
-func (r *MysqlUrlRepo) BatchCreateUrl(urls []Url) error {
+func NewMysqlUrlWriteRepo() *MysqlUrlWriteRepo {
+	return &MysqlUrlWriteRepo{
+		conn: database.GetWriteConnection(),
+	}
+}
+
+func (r *MysqlUrlWriteRepo) BatchCreateUrl(urls []Url) error {
 	_, err := r.conn.NamedExec("INSERT INTO urls (`hash`, `long`) VALUES (:hash, :long)", urls)
 
 	return err
 }
 
-func (r *MysqlUrlRepo) CreateUrl(url Url) error {
+func (r *MysqlUrlWriteRepo) CreateUrl(url Url) error {
 	_, err := r.conn.NamedExec("INSERT INTO urls (`hash`, `long`) VALUES (:hash, :long)", url)
 
 	return err
 }
 
-func (r *MysqlUrlRepo) GetByFull(url string) *Url {
+func (r *MysqlUrlReadRepo) GetByFull(url string) *Url {
 	var u Url
 	err := r.conn.Get(&u, "SELECT * FROM urls WHERE long = ? LIMIT 1", url)
 	if err != nil {
@@ -59,7 +72,7 @@ func (r *MysqlUrlRepo) GetByFull(url string) *Url {
 	return &u
 }
 
-func (r *MysqlUrlRepo) GetByHash(hash string) *Url {
+func (r *MysqlUrlReadRepo) GetByHash(hash string) *Url {
 	var u Url
 	err := r.conn.Get(&u, "SELECT * FROM urls WHERE `hash` = ? LIMIT 1", hash)
 	if err != nil {
@@ -69,7 +82,7 @@ func (r *MysqlUrlRepo) GetByHash(hash string) *Url {
 	return &u
 }
 
-func (r *MysqlUrlRepo) GetLastId() (result int) {
+func (r *MysqlUrlReadRepo) GetLastId() (result int) {
 	if err := r.conn.QueryRow("SELECT MAX(id) from urls").Scan(&result); err == nil {
 		return result
 	}
