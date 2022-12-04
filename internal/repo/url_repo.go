@@ -7,7 +7,7 @@ import (
 )
 
 type Url struct {
-	Id   uint8  `db:"id" json:"_"`
+	Id   uint8  `db:"id" json:"-"`
 	Long string `db:"long" json:"long"`
 	Hash string `db:"hash" json:"hash"`
 }
@@ -19,7 +19,7 @@ func NewUrl(hash, long string) Url {
 	}
 }
 
-type UrlRepo interface {
+type UrlRepo interface { // todo: separate to write and read (cqrs)
 	GetByFull(url string) *Url
 	GetByHash(url string) *Url
 	CreateUrl(url Url) error

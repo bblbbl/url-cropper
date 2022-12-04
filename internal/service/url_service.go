@@ -85,7 +85,7 @@ func (us *UrlService) GetLongUrl(hash string) (string, error) {
 	return url.Long, nil
 }
 
-func (us *UrlService) createUrlHash() string {
+func (us *UrlService) createUrlHash() string { // todo: change hashing method
 	g := Generator()
 
 	g.mu.Lock()
