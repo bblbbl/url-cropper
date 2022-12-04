@@ -2,18 +2,15 @@ package service
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/itchyny/base58-go"
 	"github.com/speps/go-hashids/v2"
-	"sync"
+	"math/big"
 	"urls/internal/messaging"
 	"urls/internal/repo"
 	"urls/pkg/etc"
-)
-
-var (
-	generator     *HashGenerator
-	generatorOnce sync.Once
 )
 
 type UrlService struct {
@@ -23,19 +20,6 @@ type UrlService struct {
 	urlReadRepo  repo.UrlReadRepo
 	urlWriteRepo repo.UrlWriteRepo
 	cnf          *etc.Config
-}
-
-type HashGenerator struct {
-	lastId int
-	mu     sync.RWMutex
-}
-
-func Generator() *HashGenerator {
-	generatorOnce.Do(func() {
-		generator = &HashGenerator{}
-	})
-
-	return generator
 }
 
 func NewUrlService(ctx context.Context) *UrlService {
@@ -61,11 +45,15 @@ func (us *UrlService) CropUrl(url string) string {
 		return existUrl.Hash
 	}
 
-	hash := us.createUrlHash()
+	hash, err := us.createUrlHash(url)
+	if err != nil {
+		panic(err)
+	}
+
 	us.cache.PutUrl(hash, url)
 
 	urlModel := repo.NewUrl(hash, url)
-	err := us.producer.PutUrlMessage(urlModel)
+	err = us.producer.PutUrlMessage(urlModel)
 	if err != nil {
 		_ = us.urlWriteRepo.CreateUrl(urlModel)
 	}
@@ -86,20 +74,13 @@ func (us *UrlService) GetLongUrl(hash string) (string, error) {
 	return url.Long, nil
 }
 
-func (us *UrlService) createUrlHash() string { // todo: change hashing method
-	g := Generator()
-
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	if g.lastId == 0 {
-		g.lastId = us.urlReadRepo.GetLastId()
+func (us *UrlService) createUrlHash(url string) (string, error) {
+	hash, err := us.generateShortLink(url)
+	if err != nil {
+		return "", err
 	}
 
-	hash, _ := us.data.Encode([]int{g.lastId + 1})
-	g.lastId += 1
-
-	return hash
+	return hash, nil
 }
 
 func (us *UrlService) buildFullShortUrl(hash string) string {
@@ -122,4 +103,30 @@ func (us *UrlService) WithProducer(producer messaging.UrlProducer) *UrlService {
 	us.producer = producer
 
 	return us
+}
+
+func (us *UrlService) generateShortLink(initialLink string) (string, error) {
+	urlHashBytes := sha256Of(initialLink)
+	generatedNumber := new(big.Int).SetBytes(urlHashBytes).Uint64()
+	finalString, err := base58Encoded([]byte(fmt.Sprintf("%d", generatedNumber)))
+	if err != nil {
+		return "", err
+	}
+
+	return finalString[:8], nil
+}
+
+func sha256Of(input string) []byte {
+	algorithm := sha256.New()
+	algorithm.Write([]byte(input))
+	return algorithm.Sum(nil)
+}
+
+func base58Encoded(bytes []byte) (string, error) {
+	encoding := base58.BitcoinEncoding
+	encoded, err := encoding.Encode(bytes)
+	if err != nil {
+		return "", err
+	}
+	return string(encoded), nil
 }
