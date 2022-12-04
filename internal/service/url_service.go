@@ -2,14 +2,14 @@ package service
 
 import (
 	"context"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"github.com/speps/go-hashids/v2"
+	"github.com/teris-io/shortid"
+	"hash/fnv"
 	"urls/internal/messaging"
 	"urls/internal/repo"
 	"urls/pkg/etc"
-	"urls/pkg/utils"
 )
 
 type UrlService struct {
@@ -44,11 +44,15 @@ func (us *UrlService) CropUrl(url string) string {
 		return existUrl.Hash
 	}
 
-	hash := generateShortLink(url)
+	hash, err := generateShortLink(url)
+	if err != nil {
+		panic(err)
+	}
+
 	us.cache.PutUrl(hash, url)
 
 	urlModel := repo.NewUrl(hash, url)
-	err := us.producer.PutUrlMessage(urlModel)
+	err = us.producer.PutUrlMessage(urlModel)
 	if err != nil {
 		_ = us.urlWriteRepo.CreateUrl(urlModel)
 	}
@@ -91,7 +95,17 @@ func (us *UrlService) WithProducer(producer messaging.UrlProducer) *UrlService {
 	return us
 }
 
-func generateShortLink(initialLink string) string {
-	b := sha256.Sum256([]byte(initialLink))
-	return utils.B2S(b[:8])
+func generateShortLink(initialLink string) (string, error) {
+	h := fnv.New32a()
+	_, err := h.Write([]byte(initialLink))
+	if err != nil {
+		return "", err
+	}
+
+	sid, err := shortid.New(1, shortid.DefaultABC, uint64(h.Sum32()))
+	if err != nil {
+		return "", err
+	}
+
+	return sid.Generate()
 }

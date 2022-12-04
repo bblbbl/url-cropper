@@ -7,11 +7,11 @@ require (
 	github.com/go-redis/redis/v9 v9.0.0-rc.1
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang-migrate/migrate/v4 v4.15.2
-	github.com/itchyny/base58-go v0.2.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/joho/godotenv v1.4.0
 	github.com/segmentio/kafka-go v0.4.38
 	github.com/speps/go-hashids/v2 v2.0.1
+	github.com/teris-io/shortid v0.0.0-20220617161101-71ec9f2aa569
 	go.uber.org/zap v1.23.0
 	google.golang.org/grpc v1.50.1
 	google.golang.org/protobuf v1.28.1
