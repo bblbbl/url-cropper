@@ -9,3 +9,6 @@ test-cover:
 
 show-cover:
 	go tool cover -html=coverage.out
+
+migration:
+	migrate create -ext sql -dir migrations -seq $(name)
