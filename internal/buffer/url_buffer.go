@@ -7,26 +7,25 @@ import (
 	"urls/pkg/etc"
 )
 
-const (
-	buffCap      = 1000
-	flushBuffSec = 30
-)
-
 type FlushChan chan struct{}
 
 type UrlBuffer struct {
-	mu        sync.Mutex
-	urlRepo   repo.UrlWriteRepo
-	buff      []repo.Url
-	flushTime int64
-	flushChan FlushChan
+	mu           sync.Mutex
+	urlRepo      repo.UrlWriteRepo
+	buff         []repo.Url
+	flushTime    int64
+	flushChan    FlushChan
+	buffCap      int
+	buffFlushSec int
 }
 
-func NewUrlBuffer(r repo.UrlWriteRepo) *UrlBuffer {
+func NewUrlBuffer(r repo.UrlWriteRepo, buffCap, buffFlushSec int) *UrlBuffer {
 	b := &UrlBuffer{
-		buff:      make([]repo.Url, 0, buffCap),
-		flushChan: make(chan struct{}),
-		urlRepo:   r,
+		buff:         make([]repo.Url, 0, buffCap),
+		flushChan:    make(chan struct{}),
+		urlRepo:      r,
+		buffCap:      buffCap,
+		buffFlushSec: buffFlushSec,
 	}
 
 	b.updateFlushTime()
@@ -37,13 +36,13 @@ func (b *UrlBuffer) Flush(force bool) bool {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if (len(b.buff) >= buffCap || time.Now().Unix() >= b.flushTime || force) && len(b.buff) > 0 {
+	if (len(b.buff) >= b.buffCap || time.Now().Unix() >= b.flushTime || force) && len(b.buff) > 0 {
 		err := b.urlRepo.BatchCreateUrl(b.buff)
 		if err != nil {
 			etc.GetLogger().Error("failed to batch create urls")
 		}
 
-		b.buff = make([]repo.Url, 0, buffCap)
+		b.buff = make([]repo.Url, 0, b.buffCap)
 		b.updateFlushTime()
 
 		return true
@@ -61,5 +60,5 @@ func (b *UrlBuffer) DoneFlush() FlushChan {
 }
 
 func (b *UrlBuffer) updateFlushTime() {
-	b.flushTime = time.Now().Add(flushBuffSec * time.Second).Unix()
+	b.flushTime = time.Now().Add(time.Duration(b.buffFlushSec) * time.Second).Unix()
 }

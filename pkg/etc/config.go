@@ -15,13 +15,14 @@ var (
 )
 
 type Config struct {
-	App      App      `yaml:"app"`
-	Http     Http     `yaml:"http"`
-	Rpc      Rpc      `yaml:"rpc"`
-	Redis    Redis    `yaml:"redis"`
-	Database Database `yaml:"database"`
-	Hash     Hash     `yaml:"hash"`
-	Kafka    Kafka    `yaml:"kafka"`
+	App       App       `yaml:"app"`
+	Http      Http      `yaml:"http"`
+	Rpc       Rpc       `yaml:"rpc"`
+	Redis     Redis     `yaml:"redis"`
+	Database  Database  `yaml:"database"`
+	Hash      Hash      `yaml:"hash"`
+	Kafka     Kafka     `yaml:"kafka"`
+	UrlBuffer UrlBuffer `yaml:"url_buff"`
 }
 
 type App struct {
@@ -70,6 +71,11 @@ type Hash struct {
 type Kafka struct {
 	Port int    `yaml:"port"`
 	Host string `yaml:"host"`
+}
+
+type UrlBuffer struct {
+	Cap      int `yaml:"cap"`
+	FlushSec int `yaml:"flush_sec"`
 }
 
 func GetConfig() *Config {

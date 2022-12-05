@@ -22,7 +22,8 @@ func main() {
 
 	go consumer.ListenMessages()
 
-	buff := buffer.NewUrlBuffer(repo.NewMysqlUrlWriteRepo())
+	cfg := etc.GetConfig()
+	buff := buffer.NewUrlBuffer(repo.NewMysqlUrlWriteRepo(), cfg.UrlBuffer.Cap, cfg.UrlBuffer.FlushSec)
 
 	go func(buff *buffer.UrlBuffer) {
 		for url := range consumer.Messages() {

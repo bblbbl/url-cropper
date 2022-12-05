@@ -30,3 +30,6 @@ hash:
 kafka:
   host: ${KAFKA_HOST}
   port: ${KAFKA_PORT}
+url_buff:
+  cap: 1000
+  flush_sec: 30
