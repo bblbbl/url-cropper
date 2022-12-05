@@ -44,7 +44,7 @@ func (us *UrlService) CropUrl(url string) string {
 		return existUrl.Hash
 	}
 
-	hash, err := generateShortLink(url)
+	hash, err := generateHash(url)
 	if err != nil {
 		panic(err)
 	}
@@ -95,9 +95,9 @@ func (us *UrlService) WithProducer(producer messaging.UrlProducer) *UrlService {
 	return us
 }
 
-func generateShortLink(initialLink string) (string, error) {
+func generateHash(url string) (string, error) {
 	h := fnv.New32a()
-	_, err := h.Write([]byte(initialLink))
+	_, err := h.Write([]byte(url))
 	if err != nil {
 		return "", err
 	}
